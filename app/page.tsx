@@ -13,6 +13,9 @@ export default function Home() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [isHydrated, setIsHydrated] = useState(false);
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
+  const [answerDraft, setAnswerDraft] = useState("");
+  const [submitState, setSubmitState] = useState<"idle" | "submitted">("idle");
 
   const currentCategory = useMemo(
     () =>
@@ -28,6 +31,13 @@ export default function Home() {
         return Boolean(answers[key]?.trim());
       }).length,
     [answers, currentCategory],
+  );
+
+  const selectedQuestion = currentCategory.questions[selectedQuestionIndex] ?? "";
+  const selectedQuestionKey = getQuestionKey(
+    currentCategory.name,
+    selectedQuestionIndex,
+    selectedQuestion,
   );
 
   useEffect(() => {
@@ -60,29 +70,36 @@ export default function Home() {
     }
   }, [answers, isHydrated]);
 
-  const handleAnswerChange = (
-    categoryName: string,
-    questionIndex: number,
-    question: string,
-    value: string,
-  ) => {
-    const key = getQuestionKey(categoryName, questionIndex, question);
+  useEffect(() => {
+    setSelectedQuestionIndex(0);
+    setSubmitState("idle");
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    setAnswerDraft(answers[selectedQuestionKey] ?? "");
+    setSubmitState("idle");
+  }, [answers, selectedQuestionKey]);
+
+  const handleSubmitAnswer = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedQuestion) {
+      return;
+    }
+
     setAnswers((previousAnswers) => ({
       ...previousAnswers,
-      [key]: value,
+      [selectedQuestionKey]: answerDraft,
     }));
+    setSubmitState("submitted");
   };
 
-  const clearAnswer = (
-    categoryName: string,
-    questionIndex: number,
-    question: string,
-  ) => {
-    const key = getQuestionKey(categoryName, questionIndex, question);
+  const clearAnswer = () => {
+    setAnswerDraft("");
     setAnswers((previousAnswers) => ({
       ...previousAnswers,
-      [key]: "",
+      [selectedQuestionKey]: "",
     }));
+    setSubmitState("idle");
   };
 
   const saveLabel =
@@ -249,100 +266,150 @@ export default function Home() {
         <h3 style={{ color: "#880e4f", marginBottom: "0.75rem" }}>
           {currentCategory.name}
         </h3>
-        <div style={{ display: "grid", gap: "1rem" }}>
-          {currentCategory.questions.map((question, index) => {
-            const questionKey = getQuestionKey(currentCategory.name, index, question);
-            const inputId = `answer-${index}`;
-            const answerValue = answers[questionKey] ?? "";
 
-            return (
-              <article
-                key={questionKey}
+        <div style={{ display: "grid", gap: "0.7rem", marginBottom: "1rem" }}>
+          <p style={{ margin: 0, color: "#6a1b4d", fontWeight: 600 }}>
+            1. Pick a category
+          </p>
+          <p style={{ margin: 0, color: "#6a1b4d", fontWeight: 600 }}>
+            2. Browse the questions in that category
+          </p>
+          <p style={{ margin: 0, color: "#6a1b4d", fontWeight: 600 }}>
+            3. Pick one question
+          </p>
+          <p style={{ margin: 0, color: "#6a1b4d", fontWeight: 600 }}>
+            4. Answer and submit
+          </p>
+        </div>
+
+        <label
+          htmlFor="question"
+          style={{ display: "block", marginBottom: "0.5rem", color: "#880e4f" }}
+        >
+          Select a question
+        </label>
+        <select
+          id="question"
+          value={selectedQuestionIndex}
+          onChange={(event) => setSelectedQuestionIndex(Number(event.target.value))}
+          style={{
+            width: "100%",
+            padding: "0.7rem 0.9rem",
+            borderRadius: "0.75rem",
+            border: "1px solid rgba(136, 14, 79, 0.2)",
+            marginBottom: "1rem",
+            color: "#880e4f",
+            background: "rgba(255,255,255,0.9)",
+          }}
+        >
+          {currentCategory.questions.map((question, index) => (
+            <option key={getQuestionKey(currentCategory.name, index, question)} value={index}>
+              {index + 1}. {question}
+            </option>
+          ))}
+        </select>
+
+        <form
+          onSubmit={handleSubmitAnswer}
+          style={{
+            background: "rgba(255, 255, 255, 0.55)",
+            border: "1px solid rgba(233, 30, 99, 0.15)",
+            borderRadius: "1rem",
+            padding: "1rem",
+            boxShadow: "0 4px 16px rgba(233, 30, 99, 0.08)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              marginBottom: "0.65rem",
+              color: "#6a1b4d",
+              fontWeight: 600,
+              lineHeight: 1.45,
+            }}
+          >
+            {selectedQuestionIndex + 1}. {selectedQuestion}
+          </p>
+
+          <label
+            htmlFor="question-answer"
+            style={{ display: "block", marginBottom: "0.4rem", color: "#880e4f" }}
+          >
+            Your answer
+          </label>
+          <textarea
+            id="question-answer"
+            value={answerDraft}
+            onChange={(event) => {
+              setAnswerDraft(event.target.value);
+              setSubmitState("idle");
+            }}
+            placeholder="Write your answer here..."
+            rows={4}
+            style={{
+              width: "100%",
+              resize: "vertical",
+              borderRadius: "0.8rem",
+              border: "1px solid rgba(136, 14, 79, 0.2)",
+              padding: "0.8rem 0.9rem",
+              fontSize: "0.98rem",
+              lineHeight: 1.45,
+              color: "#5c1845",
+              background: "rgba(255, 255, 255, 0.9)",
+              outlineColor: "#e91e63",
+            }}
+          />
+
+          <div
+            style={{
+              marginTop: "0.55rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ color: "#ad1457", fontSize: "0.85rem" }}>
+              {submitState === "submitted"
+                ? "Submitted"
+                : answerDraft.trim()
+                  ? `${answerDraft.trim().length} characters`
+                  : "Not answered yet"}
+            </span>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={clearAnswer}
                 style={{
-                  background: "rgba(255, 255, 255, 0.55)",
-                  border: "1px solid rgba(233, 30, 99, 0.15)",
-                  borderRadius: "1rem",
-                  padding: "1rem",
-                  boxShadow: "0 4px 16px rgba(233, 30, 99, 0.08)",
+                  border: "1px solid rgba(136, 14, 79, 0.25)",
+                  background: "rgba(255, 255, 255, 0.75)",
+                  color: "#880e4f",
+                  borderRadius: "9999px",
+                  padding: "0.35rem 0.8rem",
+                  cursor: "pointer",
+                  fontWeight: 600,
                 }}
               >
-                <p
-                  style={{
-                    margin: 0,
-                    marginBottom: "0.65rem",
-                    color: "#6a1b4d",
-                    fontWeight: 600,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {index + 1}. {question}
-                </p>
-
-                <label
-                  htmlFor={inputId}
-                  style={{ display: "block", marginBottom: "0.4rem", color: "#880e4f" }}
-                >
-                  Your answer
-                </label>
-                <textarea
-                  id={inputId}
-                  value={answerValue}
-                  onChange={(event) =>
-                    handleAnswerChange(
-                      currentCategory.name,
-                      index,
-                      question,
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Write your answer here..."
-                  rows={4}
-                  style={{
-                    width: "100%",
-                    resize: "vertical",
-                    borderRadius: "0.8rem",
-                    border: "1px solid rgba(136, 14, 79, 0.2)",
-                    padding: "0.8rem 0.9rem",
-                    fontSize: "0.98rem",
-                    lineHeight: 1.45,
-                    color: "#5c1845",
-                    background: "rgba(255, 255, 255, 0.9)",
-                    outlineColor: "#e91e63",
-                  }}
-                />
-
-                <div
-                  style={{
-                    marginTop: "0.55rem",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                  }}
-                >
-                  <span style={{ color: "#ad1457", fontSize: "0.85rem" }}>
-                    {answerValue.trim() ? `${answerValue.trim().length} characters` : "Not answered yet"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => clearAnswer(currentCategory.name, index, question)}
-                    style={{
-                      border: "1px solid rgba(136, 14, 79, 0.25)",
-                      background: "rgba(255, 255, 255, 0.75)",
-                      color: "#880e4f",
-                      borderRadius: "9999px",
-                      padding: "0.35rem 0.8rem",
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Clear
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                Clear
+              </button>
+              <button
+                type="submit"
+                style={{
+                  border: "1px solid rgba(136, 14, 79, 0.25)",
+                  background: "linear-gradient(135deg, #e91e63, #c2185b)",
+                  color: "#fff",
+                  borderRadius: "9999px",
+                  padding: "0.35rem 0.9rem",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </form>
       </section>
 
       <section
