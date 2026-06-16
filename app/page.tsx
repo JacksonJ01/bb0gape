@@ -144,7 +144,7 @@ export default function Home() {
             lineHeight: 1.6,
           }}
         >
-          Answer questions about us and see how well you really know me 🌸
+          Answer questions about us and see how well we know each other 🌸
         </p>
 
         <a
@@ -282,7 +282,7 @@ export default function Home() {
                   htmlFor={inputId}
                   style={{ display: "block", marginBottom: "0.4rem", color: "#880e4f" }}
                 >
-                  Her answer
+                  Your answer
                 </label>
                 <textarea
                   id={inputId}
